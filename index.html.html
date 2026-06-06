@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>مصنع الريس - عرض البيانات (قراءة فقط)</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Tajawal', 'sans-serif'] },
+          colors: {
+            iosBlue: '#007AFF', iosGreen: '#34C759', iosOrange: '#FF9500', iosRed: '#FF3B30', iosPurple: '#AF52DE', iosGray: '#8E8E93', iosBg: '#F2F2F7', iosDarkBg: '#000000',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --app-primary: #007AFF; 
+      --app-primary-glow: rgba(0, 122, 255, 0.3);
+    }
+    body.theme-green { --app-primary: #34C759; --app-primary-glow: rgba(52, 199, 89, 0.3); }
+    body.theme-orange { --app-primary: #FF9500; --app-primary-glow: rgba(255, 149, 0, 0.3); }
+    body.theme-purple { --app-primary: #AF52DE; --app-primary-glow: rgba(175, 82, 222, 0.3); }
+
+    .bg-primary { background-color: var(--app-primary) !important; }
+    .text-primary { color: var(--app-primary) !important; }
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background-color: #F2F2F7;
+      color: #1C1C1E;
+      transition: background-color 0.5s ease;
+    }
+    body.dark { background-color: #000000; color: #F2F2F7; }
+    .animated-login-bg { background-color: #020617; overflow: hidden; position: relative; }
+    .floating-orb { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.6; animation: floatAnimation 12s infinite alternate ease-in-out; }
+    .orb-1 { width: 50vw; height: 50vw; background: var(--app-primary); top: -10%; left: -10%; }
+    .orb-2 { width: 40vw; height: 40vw; background: #f59e0b; bottom: -10%; right: -10%; animation-delay: -6s; }
+    @keyframes floatAnimation { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(10%, 15%) scale(1.2); } }
+    .ios-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem; }
+    .futuristic-glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(25px); border-radius: 28px; }
+    .dark .futuristic-glass { background: rgba(30, 30, 30, 0.6); }
+    input, select { background-color: rgba(118, 118, 128, 0.08); border: none; border-radius: 14px; padding: 0.8rem 1.2rem; width: 100%; outline: none; font-size: 16px; }
+    .dark input, .dark select { background-color: #2C2C2E; color: #FFFFFF; }
+    .btn-ios { border-radius: 20px; font-weight: 700; padding: 0.8rem 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+    .ios-table { width: 100%; border-collapse: collapse; }
+    .ios-table th, .ios-table td { padding: 1rem; border-bottom: 1px solid rgba(142, 142, 147, 0.2); white-space: nowrap; }
+    #dailyExportTemplate, #inventoryExportTemplate { position: absolute; left: -9999px; top: -9999px; width: 1000px; background: white; color: black; z-index: -1; padding: 40px; font-family: 'Tajawal', sans-serif; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body>
+
+<div id="loginScreen" class="fixed inset-0 z-50 animated-login-bg flex items-center justify-center">
+  <div class="floating-orb orb-1"></div><div class="floating-orb orb-2"></div>
+  <div class="futuristic-glass relative z-10 w-[90%] max-w-md mx-auto p-6 text-center">
+    <h1 class="text-2xl font-black text-white">مصنع الريس - نظام العرض</h1>
+    <p class="text-gray-300 mb-6">عرض البيانات (قراءة فقط)</p>
+    <input type="password" id="viewerPassword" placeholder="كلمة المرور" class="text-center bg-black/40 text-white rounded-2xl py-3 mb-4">
+    <button id="loginViewerBtn" class="w-full bg-white text-black rounded-2xl py-3 font-black">دخول</button>
+    <div class="text-white/50 text-xs mt-4">جميع الحقوق محفوظة © وائل محمد</div>
+  </div>
+</div>
+
+<div id="appContainer" class="hidden min-h-screen w-full">
+  <main class="flex-1 min-h-screen">
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b px-4 py-4 flex justify-between items-center">
+      <h1 id="pageTitle" class="text-2xl font-black">لوحة التحكم - عرض فقط</h1>
+      <button id="darkModeToggleHeader" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center"><i class="fa-solid fa-moon dark:hidden"></i><i class="fa-solid fa-sun hidden dark:inline"></i></button>
+    </header>
+    <div class="p-4 md:p-8">
+      <!-- تبويبات التنقل (بدون أزرار تعديل) -->
+      <div class="flex flex-wrap gap-2 mb-6 border-b pb-2">
+        <button data-tab="dashboard" class="tab-btn px-4 py-2 rounded-xl font-bold bg-primary text-white">لوحة التحكم</button>
+        <button data-tab="employees" class="tab-btn px-4 py-2 rounded-xl font-bold bg-gray-200 dark:bg-gray-800">اليومية</button>
+        <button data-tab="archive" class="tab-btn px-4 py-2 rounded-xl font-bold bg-gray-200 dark:bg-gray-800">الأرشيف والتعديل</button>
+        <button data-tab="monthlyArchive" class="tab-btn px-4 py-2 rounded-xl font-bold bg-gray-200 dark:bg-gray-800">الأرشيف الشهري</button>
+        <button data-tab="inventory" class="tab-btn px-4 py-2 rounded-xl font-bold bg-gray-200 dark:bg-gray-800">المخزون</button>
+        <button data-tab="reports" class="tab-btn px-4 py-2 rounded-xl font-bold bg-gray-200 dark:bg-gray-800">تقارير الموظفين</button>
+        <button data-tab="settings" class="tab-btn px-4 py-2 rounded-xl font-bold bg-gray-200 dark:bg-gray-800">الإعدادات</button>
+      </div>
+
+      <!-- لوحة التحكم -->
+      <div id="dashboardTab" class="tab-content">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div class="futuristic-glass p-5 border-b-4 border-primary"><div class="text-iosGray">الموظفين الحاليين</div><div class="text-3xl font-black text-primary" id="statEmployees">0</div></div>
+          <div class="futuristic-glass p-5 border-b-4 border-primary"><div class="text-iosGray">إجمالي ساعات الدوام</div><div class="text-3xl font-black text-primary" id="statHours">0</div></div>
+          <div class="futuristic-glass p-5 border-b-4 border-orange-500"><div class="text-iosGray">إجمالي السلف (JOD)</div><div class="text-3xl font-black text-orange-500" id="statLoans">0</div></div>
+          <div class="futuristic-glass p-5 border-b-4 border-red-500"><div class="text-iosGray">الخصومات (JOD)</div><div class="text-3xl font-black text-red-500" id="statDeductions">0</div></div>
+        </div>
+      </div>
+
+      <!-- اليومية (قراءة فقط) -->
+      <div id="employeesTab" class="tab-content hidden">
+        <div class="futuristic-glass p-4 mb-4">
+          <div class="flex flex-wrap justify-between items-center gap-4">
+            <h3 class="font-black text-lg">جدول اليومية</h3>
+            <div class="flex items-center gap-2 bg-white dark:bg-black px-4 py-2 rounded-xl shadow-sm border">
+              <label class="text-sm font-bold">اختر التاريخ:</label>
+              <input type="date" id="filterDate" class="bg-transparent font-bold w-auto p-0">
+            </div>
+          </div>
+          <div class="overflow-x-auto mt-4">
+            <table class="ios-table min-w-[900px]">
+              <thead><tr><th>#</th><th>الاسم</th><th>البدء</th><th>الانتهاء</th><th>الساعات</th><th>إضافي</th><th class="text-orange-500">السلفة</th><th class="text-red-500">الخصم</th><th>سبب الخصم</th><th>الملاحظة</th> </thead>
+              <tbody id="employeesTbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="futuristic-glass p-4 mb-4">
+          <h3 class="font-black mb-3">تجهيز التقرير اليومي</h3>
+          <div class="flex flex-wrap gap-4 items-end">
+            <div class="flex-1"><label class="text-sm font-bold">نوع الفحم</label><select id="dailyProdType" class="w-full"><option value="">-- اختر --</option><option>سداسي 24</option><option>سداسي 22</option></select></div>
+            <div class="flex-1"><label class="text-sm font-bold">الإنتاج</label><input id="dailyProdInput" type="text" placeholder="الكمية"></div>
+            <div class="flex-1"><label class="text-sm font-bold">المرتجع</label><input id="dailyScrapInput" type="text" placeholder="رايش"></div>
+            <button onclick="exportDailyImage()" class="btn-ios bg-black text-white"><i class="fa-solid fa-camera"></i> حفظ الصورة</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- الأرشيف والتعديل (عرض فقط) -->
+      <div id="archiveTab" class="tab-content hidden">
+        <div class="futuristic-glass p-4">
+          <h2 class="text-xl font-black mb-4">أرشيف السجلات (كل السجلات)</h2>
+          <div class="overflow-x-auto"><table class="ios-table min-w-[800px]"><thead><tr><th>التاريخ</th><th>الاسم</th><th>البدء</th><th>الانتهاء</th><th>الدوام</th><th>السلفة</th><th>الخصم</th><th>ملاحظة</th> </thead><tbody id="archiveTbody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- الأرشيف الشهري (قراءة فقط) -->
+      <div id="monthlyArchiveTab" class="tab-content hidden">
+        <div class="futuristic-glass p-4">
+          <h2 class="text-xl font-black text-red-500 mb-4">الأرشيف الشهري</h2>
+          <div class="flex flex-col sm:flex-row gap-3 mb-4"><select id="monthlyArchiveEmpSelector" class="w-full sm:flex-1"><option value="">-- اختر الموظف --</option></select><button onclick="loadMonthlyArchiveForEmp()" class="btn-ios bg-primary text-white px-6">عرض</button></div>
+          <div class="overflow-x-auto"><table class="ios-table min-w-[800px]"><thead><tr><th>شهر الأرشفة</th><th>التاريخ</th><th>الاسم</th><th>الدوام</th><th>إضافي</th><th>السلفة</th><th>الخصم</th><th>الملاحظة</th> </thead><tbody id="monthlyArchiveTbody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- المخزون (قراءة فقط + تصدير) -->
+      <div id="inventoryTab" class="tab-content hidden">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+          <h2 class="text-xl font-black">المخزون والإنتاج</h2>
+          <div class="flex gap-2">
+            <button id="exportAllInventoryBtn" class="btn-ios bg-primary text-white text-sm"><i class="fa-solid fa-camera"></i> تصدير الكل</button>
+            <button id="exportCharcoalBtn" class="btn-ios bg-orange-500 text-white text-sm"><i class="fa-solid fa-fire"></i> فحم</button>
+            <button id="exportCartonBtn" class="btn-ios bg-blue-500 text-white text-sm"><i class="fa-solid fa-box-open"></i> كراتين</button>
+            <button id="exportShellBtn" class="btn-ios bg-green-500 text-white text-sm"><i class="fa-solid fa-seedling"></i> قشور</button>
+          </div>
+        </div>
+        <div class="futuristic-glass p-4 mb-4 flex flex-wrap gap-4"><input id="reportSender" placeholder="اسم المُسلِّم" class="flex-1"><input id="reportReceiver" placeholder="اسم المستلم" class="flex-1"></div>
+        <div class="space-y-6">
+          <div class="futuristic-glass p-4"><h3 class="font-black mb-3"><i class="fa-solid fa-fire text-orange-500"></i> الفحم الجاهز</h3><div class="overflow-x-auto"><table class="ios-table min-w-[600px]"><thead><tr><th>النوع</th><th>الكرتونة</th><th>العدد</th><th>الوزن</th><th>المستلم</th> </thead><tbody id="invCharTbody"></tbody></table></div></div>
+          <div class="futuristic-glass p-4"><h3 class="font-black mb-3"><i class="fa-solid fa-box-open text-blue-500"></i> الكراتين الفارغة</h3><div class="overflow-x-auto"><table class="ios-table min-w-[700px]"><thead><tr><th>المستلم</th><th>المستلم منه</th><th>التاريخ</th><th>النوع</th><th>العدد</th> </thead><tbody id="invCartonTbody"></tbody></table></div></div>
+          <div class="futuristic-glass p-4"><h3 class="font-black mb-3"><i class="fa-solid fa-seedling text-green-500"></i> القشور والمواد الخام</h3><div class="overflow-x-auto"><table class="ios-table min-w-[800px]"><thead><tr><th>المستلم</th><th>المستلم منه</th><th>التاريخ</th><th>النوع</th><th>وزن الكيس</th><th>العدد</th><th>الإجمالي</th> </thead><tbody id="invShellTbody"></tbody></table></div></div>
+        </div>
+      </div>
+
+      <!-- تقارير الموظفين -->
+      <div id="reportsTab" class="tab-content hidden">
+        <div class="futuristic-glass p-4">
+          <h2 class="text-xl font-black mb-4">تقارير الموظفين</h2>
+          <div class="flex flex-wrap gap-4 items-end mb-6"><select id="reportEmpName" class="w-64"><option value="">-- اختر الموظف --</option></select><button onclick="generateIndividualReport()" class="btn-ios bg-primary text-white">عرض التقرير</button></div>
+          <div id="individualReportView" class="bg-white dark:bg-gray-900 p-4 rounded-xl hidden"></div>
+        </div>
+      </div>
+
+      <!-- الإعدادات (مظهر فقط) -->
+      <div id="settingsTab" class="tab-content hidden">
+        <div class="futuristic-glass p-6"><h3 class="text-xl font-black mb-4">الإعدادات</h3><button id="settingsDarkModeBtn" class="btn-ios bg-black text-white">الوضع الداكن</button><p class="mt-4 text-gray-500">هذه نسخة للقراءة فقط، لا يمكن تعديل البيانات.</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="dailyExportTemplate"><div style="text-align:center"><h2>مصنع الريس</h2><div>التاريخ: <span id="expDateText"></span></div><div>الإنتاج: <span id="expProdText"></span> | المرتجع: <span id="expScrapText"></span></div></div><table border="1" cellpadding="8" style="width:100%"><thead><tr><th>#</th><th>التاريخ</th><th>الاسم</th><th>البدء</th><th>الانتهاء</th><th>الدوام</th><th>إضافي</th><th>الخصم</th><th>ملاحظة</th></tr></thead><tbody id="exportDailyTbody"></tbody></table></div>
+<div id="inventoryExportTemplate" style="position:absolute;left:-9999px;top:-9999px;width:900px;background:white;padding:40px"><div id="inventoryExportContent"></div></div>
+<div id="toastContainer" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] bg-black/80 text-white px-6 py-3 rounded-full font-bold transition-all duration-300 transform translate-y-10 opacity-0"></div>
+
+<script>
+  const API_URL = '/api';
+  let db = { employees: [], monthlyArchive: [], inventory: { charcoal: [], carton: [], shell: [] } };
+  function showToast(msg) { let t = document.getElementById('toastContainer'); t.innerHTML = msg; t.classList.remove('translate-y-10','opacity-0'); setTimeout(()=>t.classList.add('translate-y-10','opacity-0'),2000); }
+  async function fetchData() {
+    try {
+      const [empRes, monthlyRes, invRes] = await Promise.all([
+        axios.get(`${API_URL}/employees`),
+        axios.get(`${API_URL}/archive/all`),
+        axios.get(`${API_URL}/inventory`)
+      ]);
+      db.employees = empRes.data;
+      db.monthlyArchive = monthlyRes.data;
+      db.inventory = invRes.data;
+      renderAll();
+    } catch(e) { console.error(e); showToast('خطأ في تحميل البيانات'); }
+  }
+  function formatTime(t) { if(!t || t==='undefined'||t==='null') return '-'; let [h,m]=String(t).split(':'); if(!h) return '-'; let ap = h>=12?'م':'ص'; h = h%12||12; return `${h.toString().padStart(2,'0')}:${m} ${ap}`; }
+  function renderDailyTable() {
+    let date = document.getElementById('filterDate').value;
+    if(!date) { let d=new Date(); date=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; document.getElementById('filterDate').value=date; }
+    let filtered = db.employees.filter(e=>e.date && e.date.split('T')[0]===date);
+    let tb = document.getElementById('employeesTbody'); tb.innerHTML='';
+    if(filtered.length===0) { tb.innerHTML='<tr><td colspan="10" class="text-center py-6">لا توجد سجلات</td></tr>'; return; }
+    filtered.forEach((e,i)=>{
+      let start = (e.note==='إجازة'||!e.start_time) ? '-' : formatTime(e.start_time);
+      let end = (e.note==='إجازة'||!e.end_time) ? '-' : formatTime(e.end_time);
+      tb.innerHTML+=`<tr><td>${i+1}</td><td>${e.name}</td><td dir="ltr">${start}</td><td dir="ltr">${end}</td><td>${e.base_hours||0}</td><td>${e.extra_hours||0}</td><td class="text-orange-500">${e.loan||0}</td><td class="text-red-500">${e.deduction||0}</td><td>${e.deduction_reason||'-'}</td><td>${e.note||'-'}</td></tr>`;
+    });
+  }
+  function renderAll() {
+    let totalEmp = db.employees.length;
+    let totalHours = db.employees.reduce((s,e)=>s+(e.base_hours||0),0);
+    let totalLoans = db.employees.reduce((s,e)=>s+(e.loan||0),0);
+    let totalDed = db.employees.reduce((s,e)=>s+(e.deduction||0),0);
+    document.getElementById('statEmployees').innerText = totalEmp;
+    document.getElementById('statHours').innerText = totalHours;
+    document.getElementById('statLoans').innerText = totalLoans;
+    document.getElementById('statDeductions').innerText = totalDed;
+    renderDailyTable();
+    // Archive table (all employees)
+    let arcTbody = document.getElementById('archiveTbody'); arcTbody.innerHTML='';
+    db.employees.forEach(e=>{
+      arcTbody.innerHTML+=`<tr><td>${new Date(e.date).toLocaleDateString('ar-EG')}</td><td>${e.name}</td><td dir="ltr">${formatTime(e.start_time)}</td><td dir="ltr">${formatTime(e.end_time)}</td><td>${e.base_hours||0}</td><td>${e.loan||0}</td><td>${e.deduction||0}</td><td>${e.note||'-'}</td></tr>`;
+    });
+    // Monthly archive select
+    let names = [...new Set(db.employees.map(e=>e.name).concat(db.monthlyArchive.map(e=>e.name)))];
+    document.getElementById('monthlyArchiveEmpSelector').innerHTML = '<option value="">-- اختر الموظف --</option>'+names.map(n=>`<option>${n}</option>`).join('');
+    document.getElementById('reportEmpName').innerHTML = '<option value="">-- اختر الموظف --</option>'+names.map(n=>`<option>${n}</option>`).join('');
+    // Inventory tables
+    let invC = document.getElementById('invCharTbody'); invC.innerHTML='';
+    db.inventory.charcoal.forEach(c=>invC.innerHTML+=`<tr><td>${c.type}</td><td>${c.carton}</td><td>${c.count}</td><td>${c.weight||'-'}</td><td>${c.receiver||'-'}</td></tr>`);
+    let invCa = document.getElementById('invCartonTbody'); invCa.innerHTML='';
+    db.inventory.carton.forEach(c=>invCa.innerHTML+=`<tr><td>${c.receiver||'-'}</td><td>${c.sender||'-'}</td><td>${c.date?new Date(c.date).toLocaleDateString('ar-EG'):'-'}</td><td>${c.type}</td><td>${c.count}</td></tr>`);
+    let invS = document.getElementById('invShellTbody'); invS.innerHTML='';
+    db.inventory.shell.forEach(c=>invS.innerHTML+=`<tr><td>${c.receiver||'-'}</td><td>${c.sender||'-'}</td><td>${c.date?new Date(c.date).toLocaleDateString('ar-EG'):'-'}</td><td>${c.type}</td><td>${c.weight}</td><td>${c.count}</td><td>${c.weight*c.count}</td></tr>`);
+  }
+  window.loadMonthlyArchiveForEmp = function() {
+    let name = document.getElementById('monthlyArchiveEmpSelector').value;
+    if(!name) return showToast('اختر موظفاً');
+    let records = db.monthlyArchive.filter(r=>r.name===name);
+    let tb = document.getElementById('monthlyArchiveTbody'); tb.innerHTML='';
+    if(records.length===0) { tb.innerHTML='<tr><td colspan="8">لا توجد سجلات</td></tr>'; return; }
+    records.forEach(r=>{
+      tb.innerHTML+=`<tr><td>${r.archive_month||'-'}</td><td>${new Date(r.date).toLocaleDateString('ar-EG')}</td><td>${r.name}</td><td>${r.base_hours||0}</td><td>${r.extra_hours||0}</td><td class="text-orange-500">${r.loan||0}</td><td class="text-red-500">${r.deduction||0}</td><td>${r.note||'-'}</td></tr>`;
+    });
+  };
+  window.generateIndividualReport = function() {
+    let name = document.getElementById('reportEmpName').value;
+    if(!name) return showToast('اختر موظفاً');
+    let data = [...db.employees, ...db.monthlyArchive].filter(e=>e.name===name);
+    if(!data.length) return showToast('لا توجد بيانات');
+    let tb=0,te=0,tl=0,td=0,tv=0;
+    let rows='';
+    data.forEach(d=>{
+      tb+=Number(d.base_hours||0); te+=Number(d.extra_hours||0); tl+=Number(d.loan||0); td+=Number(d.deduction||0);
+      if(d.note==='إجازة') tv++;
+      rows+=`<tr><td>${new Date(d.date).toLocaleDateString('ar-EG')}</td><td dir="ltr">${formatTime(d.start_time)}</td><td dir="ltr">${formatTime(d.end_time)}</td><td>${d.base_hours||0}</td><td>${d.extra_hours||0}</td><td class="text-orange-500">${d.loan||0}</td><td class="text-red-500">${d.deduction||0}</td><td>${d.note||'-'}</td></tr>`;
+    });
+    let html = `<h3 class="text-xl font-black mb-4">تقرير الموظف: ${name}</h3>
+                <div class="grid grid-cols-5 gap-2 mb-6"><div>الدوام: ${tb}</div><div>الإضافي: ${te}</div><div>السلف: ${tl}</div><div>الخصم: ${td}</div><div>الإجازات: ${tv}</div></div>
+                <div class="overflow-x-auto"><table class="w-full border"><thead><tr><th>التاريخ</th><th>البدء</th><th>الانتهاء</th><th>الدوام</th><th>إضافي</th><th>السلفة</th><th>الخصم</th><th>ملاحظة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    document.getElementById('individualReportView').innerHTML = html;
+    document.getElementById('individualReportView').classList.remove('hidden');
+  };
+  window.exportDailyImage = async function() {
+    let date = document.getElementById('filterDate').value;
+    if(!date) return showToast('اختر التاريخ أولاً');
+    let employees = db.employees.filter(e=>e.date && e.date.split('T')[0]===date);
+    if(employees.length===0) return showToast('لا توجد سجلات لهذا التاريخ');
+    document.getElementById('expProdText').innerText = document.getElementById('dailyProdInput').value||'-';
+    document.getElementById('expScrapText').innerText = document.getElementById('dailyScrapInput').value||'-';
+    document.getElementById('expDateText').innerText = date;
+    let tbody = document.getElementById('exportDailyTbody'); tbody.innerHTML='';
+    employees.forEach((e,i)=>{
+      let start = (e.note==='إجازة'||!e.start_time) ? '-' : formatTime(e.start_time);
+      let end = (e.note==='إجازة'||!e.end_time) ? '-' : formatTime(e.end_time);
+      tbody.innerHTML+=`<tr><td>${i+1}</td><td>${date}</td><td>${e.name}</td><td>${start}</td><td>${end}</td><td>${e.base_hours||0}</td><td>${e.extra_hours||0}</td><td>${e.deduction||0}</td><td>${e.note||'-'}</td></tr>`;
+    });
+    let canvas = await html2canvas(document.getElementById('dailyExportTemplate'),{scale:2});
+    let link = document.createElement('a'); link.download=`تقرير_${date}.png`; link.href=canvas.toDataURL(); link.click(); showToast('تم التصدير');
+  };
+  async function exportInventorySections(sections) {
+    let sender = document.getElementById('reportSender').value.trim()||'غير محدد';
+    let receiver = document.getElementById('reportReceiver').value.trim()||'غير محدد';
+    let dateStr = new Date().toLocaleDateString('ar-EG');
+    let html = `<div style="text-align:center"><h2>مصنع الريس</h2><p>المُسلِّم: ${sender} | المستلم: ${receiver}</p><p>التاريخ: ${dateStr}</p></div>`;
+    if(sections.includes('charcoal') && db.inventory.charcoal.length){
+      html+=`<h3>الفحم الجاهز</h3><table border="1"><tr><th>النوع</th><th>الكرتونة</th><th>العدد</th><th>الوزن</th><th>المستلم</th></tr>`;
+      db.inventory.charcoal.forEach(c=>html+=`<tr><td>${c.type}</td><td>${c.carton}</td><td>${c.count}</td><td>${c.weight||'-'}</td><td>${c.receiver||'-'}</td></tr>`);
+      html+=`</table>`;
+    }
+    if(sections.includes('carton') && db.inventory.carton.length){
+      html+=`<h3>الكراتين الفارغة</h3><table border="1"><tr><th>المستلم</th><th>المستلم منه</th><th>التاريخ</th><th>النوع</th><th>العدد</th></tr>`;
+      db.inventory.carton.forEach(c=>html+=`<tr><td>${c.receiver||'-'}</td><td>${c.sender||'-'}</td><td>${c.date?new Date(c.date).toLocaleDateString('ar-EG'):'-'}</td><td>${c.type}</td><td>${c.count}</td></tr>`);
+      html+=`</table>`;
+    }
+    if(sections.includes('shell') && db.inventory.shell.length){
+      html+=`<h3>القشور والمواد الخام</h3><table border="1"><tr><th>المستلم</th><th>المستلم منه</th><th>التاريخ</th><th>النوع</th><th>وزن الكيس</th><th>العدد</th><th>الإجمالي</th></tr>`;
+      db.inventory.shell.forEach(c=>html+=`<tr><td>${c.receiver||'-'}</td><td>${c.sender||'-'}</td><td>${c.date?new Date(c.date).toLocaleDateString('ar-EG'):'-'}</td><td>${c.type}</td><td>${c.weight}</td><td>${c.count}</td><td>${c.weight*c.count}</td></tr>`);
+      html+=`</table>`;
+    }
+    document.getElementById('inventoryExportContent').innerHTML = html;
+    let canvas = await html2canvas(document.getElementById('inventoryExportTemplate'),{scale:2});
+    let link = document.createElement('a'); link.download=`inventory_${dateStr}.png`; link.href=canvas.toDataURL(); link.click(); showToast('تم التصدير');
+  }
+  document.getElementById('exportAllInventoryBtn').onclick = ()=>exportInventorySections(['charcoal','carton','shell']);
+  document.getElementById('exportCharcoalBtn').onclick = ()=>exportInventorySections(['charcoal']);
+  document.getElementById('exportCartonBtn').onclick = ()=>exportInventorySections(['carton']);
+  document.getElementById('exportShellBtn').onclick = ()=>exportInventorySections(['shell']);
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.onclick = ()=>{
+      document.querySelectorAll('.tab-content').forEach(t=>t.classList.add('hidden'));
+      document.getElementById(btn.dataset.tab+'Tab').classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('bg-primary','text-white'));
+      btn.classList.add('bg-primary','text-white');
+      document.getElementById('pageTitle').innerText = btn.innerText.trim();
+    };
+  });
+  // Dark mode
+  const toggleDark = ()=>document.body.classList.toggle('dark');
+  document.getElementById('darkModeToggleHeader').onclick = toggleDark;
+  document.getElementById('settingsDarkModeBtn').onclick = toggleDark;
+  document.getElementById('filterDate').addEventListener('change', renderDailyTable);
+  // Login
+  document.getElementById('loginViewerBtn').onclick = ()=>{
+    if(document.getElementById('viewerPassword').value === '2002'){ // يمكن تغيير كلمة المرور هنا
+      document.getElementById('loginScreen').style.display='none';
+      document.getElementById('appContainer').classList.remove('hidden');
+      fetchData();
+    } else showToast('كلمة مرور خاطئة');
+  };
+  // ضبط التاريخ الافتراضي
+  let today = new Date().toISOString().slice(0,10);
+  document.getElementById('filterDate').value = today;
+  // تحميل الثيم المحفوظ
+  if(localStorage.getItem('alrays_dark')==='true') document.body.classList.add('dark');
+</script>
+</body>
+</html>
